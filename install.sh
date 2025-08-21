@@ -5,39 +5,55 @@ set -e
 
 DEV=0
 HELP=0
+PREFIX="~"
 
-for arg in "$@"; do
-    case "$arg" in
-        --dev)
-            DEV=1
+ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dev) ARGS+=("-d"); shift;;
+        --help) ARGS+=("-h"); shift;;
+        --prefix)
+            if [[ -z "$2" ]]; then
+                echo "Erro: Você deve passar algum parâmetro junto com o prefixo!"
+                exit 1
+            fi
+            ARGS+=("-p" "$2")
+            shift 2
+            ;;
+        *)
+            ARGS+=("$1")
             shift
-        ;;
-        --help)
-            HELP=1
-            shift
-        ;;
+            ;;
     esac
 done
 
-while getopts "dh" opt; do
+set -- "${ARGS[@]}"
+
+while getopts "dhp:" opt; do
     case "$opt" in
         d)
             DEV=1
-            shift
         ;;
         h)
             HELP=1
         ;;
+        p)
+            PREFIX="${OPTARG%/}"
+        ;;
         *)
-            echo "Opção Inválida! -h para ajuda!"
+            echo "Opção Inválida! -h ou --help para ajuda!"
             exit 1
         ;;
     esac
 done
 
+set --
+
 if [[ $HELP -eq 1 ]]; then
     echo "./install.sh [OPTIONS]"
-    echo "-d --dev -> Run with debug mode"
+    echo "-d --dev -> Executar mostrando avisos e erros"
+    echo "-p --prefix -> Escolher lugar para instalar o ambiente Conda"
     exit 0
 fi
 
@@ -50,6 +66,8 @@ out() {
         "$@" > /dev/null 2>&1
     fi
 }
+
+PREFIX="$(realpath -m "${PREFIX/#\~/$HOME}")"
 
 # Visual Colors and Texts
 YELLOW='\033[0;33m'
@@ -76,12 +94,12 @@ log_info "Verificando instalação do Conda..."
 
 NEW_CONDA=0
 
-if [ -f "$HOME/miniconda3/bin/activate" ]; then
+if [ -f "$PREFIX/miniconda3/bin/activate" ]; then
     log_success "Conda ja instalado."
 else 
     log_info "Instalando Conda..."
     out wget -O ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash ~/miniconda.sh
+    bash ~/miniconda.sh -b -p "$PREFIX/miniconda3"
     rm ~/miniconda.sh
     log_success "Conda instalado com sucesso"
     NEW_CONDA=1
@@ -89,7 +107,7 @@ fi
 
 # Setup Environment
 log_info "Ajustando ambiente Conda..."
-source ~/miniconda3/bin/activate
+source "$PREFIX/miniconda3/bin/activate"
 if [[ $NEW_CONDA -eq 1 ]]; then
     out conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
     out conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
@@ -106,7 +124,7 @@ read GPU_CONFIG
 
 if [[ $GPU_CONFIG == "y" || $GPU_CONFIG == "Y" ]]; then
     GPU_CONFIG="GPU"
-    out conda install nvidia::cuda-toolkit conda-forge::cudnn -y
+    out conda install -c nvidia/label/cuda-11.8.0 cuda-toolkit -y
 else
     GPU_CONFIG="CPU_ONLY"
 fi
