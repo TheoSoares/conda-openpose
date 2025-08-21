@@ -74,6 +74,8 @@ log_success() {
 
 log_info "Verificando instalação do Conda..."
 
+NEW_CONDA=0
+
 if [ -f "$HOME/miniconda3/bin/activate" ]; then
     log_success "Conda ja instalado."
 else 
@@ -83,24 +85,29 @@ else
     bash ~/miniconda3/miniconda.sh
     rm ~/miniconda3/miniconda.sh
     log_success "Conda instalado com sucesso"
+    NEW_CONDA=1
 fi
 
 # Setup Environment
 log_info "Ajustando ambiente Conda..."
 source ~/miniconda3/bin/activate
+if [[ $NEW_CONDA -eq 1 ]]; then
+    out conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    out conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+fi
 out conda remove -n OpenposeConda --all -y || true
 out conda create -n OpenposeConda python=3.10 -y
 conda activate OpenposeConda
 pip install -q ipykernel
-out conda install --quiet -c boost boost-cpp cmake compilers glog=0.4.0 hdf5 libgl libopengl libprotobuf=3.20.1 make openblas opencv=4.6.0 protobuf=3.20.1 qt -y
+out conda install -c conda-forge boost boost-cpp cmake compilers glog=0.4.0 hdf5 libgl libopengl libprotobuf=3.20.1 make openblas opencv=4.6.0 protobuf=3.20.1 qt -y
 log_success "Ambiente Conda configurado com sucesso"
 
 log_info "Construir OpenPose para Placa ${GREEN}NVIDIA${NOCOLOR}? [y/[n]]: "
 read GPU_CONFIG
 
-if [[ "$GPU_CONFIG" == "y" || "$GPU_CONFIG" == "Y" ]]; then
+if [[ $GPU_CONFIG == "y" || $GPU_CONFIG == "Y" ]]; then
     GPU_CONFIG="GPU"
-    out conda install nvidia::cuda-toolkit conda-forge::cudnn
+    out conda install nvidia::cuda-toolkit conda-forge::cudnn -y
 else
     GPU_CONFIG="CPU_ONLY"
 fi
@@ -111,7 +118,7 @@ if [ -d "openpose/models" ]; then
     log_info "O diretório OpenPose já existe. Deseja criar um novo? [[y]/n]: "
     read NEW_OPENPOSE
 
-    if [[ "$NEW_OPENPOSE" == "n" || "$NEW_OPENPOSE" == "N" ]]; then
+    if [[ $NEW_OPENPOSE == "n" || $NEW_OPENPOSE == "N" ]]; then
         OPENPOSE_EXIST=1
         shopt -s nullglob
 
@@ -134,13 +141,13 @@ if [ -d "openpose/models" ]; then
 
         cd ../..
 
-        if [[ "$NEW_MODELS" -eq 0 ]]; then
+        if [[ $NEW_MODELS -eq 0 ]]; then
             log_info "Modelos já instalados. Prosseguindo..."
         fi
     fi
 fi
 
-if [[ "$OPENPOSE_EXIST" -eq 0 ]]; then
+if [[ $OPENPOSE_EXIST -eq 0 ]]; then
     log_info "Clonando repositório OpenPose..."
     rm -rf openpose
     git clone -q https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
