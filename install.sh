@@ -80,10 +80,9 @@ if [ -f "$HOME/miniconda3/bin/activate" ]; then
     log_success "Conda ja instalado."
 else 
     log_info "Instalando Conda..."
-    mkdir -p ~/miniconda3
-    out wget -O ~/miniconda3/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash ~/miniconda3/miniconda.sh
-    rm ~/miniconda3/miniconda.sh
+    out wget -O ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash ~/miniconda.sh
+    rm ~/miniconda.sh
     log_success "Conda instalado com sucesso"
     NEW_CONDA=1
 fi
